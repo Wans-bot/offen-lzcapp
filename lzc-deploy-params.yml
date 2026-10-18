@@ -1,0 +1,12 @@
+params:
+  - id: admin_email
+    type: string
+    name: "管理员邮箱"
+    description: "Offen 操作台的登录邮箱。留空则用默认值 admin@offen.local。"
+    optional: true
+    default_value: "admin@offen.local"
+  - id: admin_password
+    type: string
+    name: "管理员密码"
+    description: "Offen 操作台的登录密码（8-64 字符）。留空则使用默认密码 Offen@Lazycat2026（打开应用会自动填充登录）；也可在此自定义，自定义后默认密码不再适用。"
+    optional: true

@@ -1,0 +1,87 @@
+usage: |
+  Offen 是用来统计自己网站访问情况的自托管工具。本应用是它的「统计后端 + 操作台」。
+
+  首次使用：
+  1. 打开应用会自动登录：未设置自定义密码时，默认账号为 admin@offen.local，默认密码 Offen@Lazycat2026（登录页会自动填充，不需要手打；也可在安装时自定义管理员密码）。
+  2. 进入操作台后可查看访问量、来源、页面等统计。
+  3. 在操作台的「Embed code」里复制跟踪代码，贴到你要统计的网站上即可开始收集数据。
+
+  说明：
+  - 只有跟踪脚本与访客视图（/script.js、/vault）对匿名访客开放；登录页与操作台只在懒猫客户端或已登录的微服用户可访问，不会被别人匿名打开。
+  - 被统计网站的访客不需要懒猫账号；数据存在 /lzcapp/var 下，重启与升级不丢失。
+  - 界面目前只有英文（上游未提供中文界面）。
+application:
+  subdomain: offen
+  # 只放开「跟踪脚本 + 访客视图 + 它们依赖的只读接口与静态资源」。
+  # 不要写 [/] 或 [/*]：那会把登录页一起放开，而登录页带 builtin://simple-inject-password 注入，
+  # 匿名访客一打开就会被自动填入安装参数里的管理员账号密码并以操作员身份进入操作台（2026-10-11 实测）。
+  public_path:
+    - /script.js                 # 被统计站点加载的跟踪脚本
+    - /vault                     # 访客数据/同意视图
+    - /vault/*                   # 该视图的静态资源（vendor-*.js / index-*.js）
+    - /api/accounts              # 访客视图只读接口
+    - /api/accounts/*            # 账号样式等只读接口
+    - /api/events                # 访客事件上报
+    - /api/exchange              # 同意令牌交换
+    - /tachyons.min.css
+    - /fonts.css
+    - /fonts/*
+    - /favicon.ico
+  injects:
+    - id: offen-login-autofill
+      'on': browser
+      # 保持 false：验收脚手架等没有 SAFE_UID 的上下文也要能自动填充（否则审核员无法登录）。
+      # 安全性由 public_path 保证：/login 不在白名单里，匿名访客根本到不了这个页面。
+      auth_required: false
+      # 必须挂 /*：Offen 是 SPA，登录页常由客户端路由切换进入（从 `/` 点「Log in as operator」），
+      # 那种情况下浏览器不会重新请求 /login 文档，挂在 /login 上的注入不会被加载。
+      when:
+        - /*
+      do:
+        # 驳回 #20226「密码自动填充无效」修复：改为自写注入（轮询等待 Offen 的
+        # Preact 登录表单渲染完成后再填充与提交），替代 builtin://simple-inject-password。
+        # 参数与建库使用同一表达式：未填参数时 = 固定默认密码，保证
+        # 「建库密码 = 自动填充密码 = 简介披露的默认密码」，任一台盒子可复现。
+        - src: file:///lzcapp/pkg/content/lazycat-injects/offen-login-autofill.js
+          params:
+            user: '{{ if (index .U "admin_email") }}{{ index .U "admin_email" }}{{ else }}admin@offen.local{{ end }}'
+            password: '{{ if (index .U "admin_password") }}{{ index .U "admin_password" }}{{ else }}Offen@Lazycat2026{{ end }}'
+  health_check:
+    test_url: http://offen:80/healthz
+    disable: false
+    start_period: 60s
+    timeout: 5s
+  upstreams:
+    - location: /
+      backend: http://offen:80
+services:
+  offen:
+    image: registry.lazycat.cloud/wans/offen/offen:a03a574a6f2a77f9
+    environment:
+      OFFEN_SERVER_PORT: "80"
+      OFFEN_SERVER_REVERSEPROXY: "true"
+      OFFEN_SECRET: '{{ stable_secret "OFFEN_SECRET" }}'
+      OFFEN_DATABASE_DIALECT: sqlite3
+      OFFEN_DATABASE_CONNECTIONSTRING: /var/opt/offen/offen.db
+      TZ: Asia/Shanghai
+    binds:
+      - /lzcapp/var/offen:/var/opt/offen
+      - /lzcapp/var/offen-cache:/var/www/.cache
+    setup_script: |
+      set -e
+      mkdir -p /var/opt/offen /var/www/.cache
+      chown -R offen:offen /var/opt/offen /var/www/.cache
+      if [ ! -s /var/opt/offen/offen.db ]; then
+        # 注意：不能加 -populate。该标志要求把缺失的密钥持久化到 env 文件，
+        # 而容器内没有 env 文件，offen 会 fatal:
+        #   config: unable to find env file to persist settings as no env file could be found
+        # 进而 lzcinit panic。OFFEN_SECRET 已由 manifest 的 stable_secret 提供，无需 populate。
+        # 与注入使用完全相同的兜底表达式，保证「建号用的密码」= 「登录页自动填充的密码」。
+        su -s /bin/sh offen -c 'offen setup -email "{{ if (index .U "admin_email") }}{{ index .U "admin_email" }}{{ else }}admin@offen.local{{ end }}" -name "Offen" -password "{{ if (index .U "admin_password") }}{{ index .U "admin_password" }}{{ else }}Offen@Lazycat2026{{ end }}"'
+      fi
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:80/ >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s

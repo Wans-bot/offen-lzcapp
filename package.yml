@@ -1,0 +1,61 @@
+package: cloud.lazycat.app.offen
+version: 1.4.2-4
+name: Offen
+description: A fair, open-source and privacy-friendly web analytics tool.
+author: Offen Authors
+license: Apache-2.0
+homepage: https://github.com/offen/offen
+min_os_version: 1.5.0
+locales:
+  zh-CN:
+    name: Offen
+    description: Offen 是一个尊重隐私的开源网站统计工具，数据完全自有，支持多站点与自定义事件分析。
+    usage: |
+      Offen 用于收集和分析你网站的访问数据，数据完全由你掌控。本应用是统计后端 + 操作台。
+
+      审核账号（默认值；安装时未自定义管理员密码时使用。打开应用会自动填充并登录，一般不需要手打）：
+      - 邮箱：admin@offen.local
+      - 密码：Offen@Lazycat2026
+
+      首次使用：
+      1. 打开应用会跳转登录页并自动填充登录，直接进入操作台。
+      2. 进入操作台后可查看访问量、来源、页面等统计。
+      3. 在操作台复制跟踪代码（Embed code），贴到你要统计的网站上即可开始收集数据。
+
+      说明：
+      - 若在安装时填写了自定义管理员密码，以上默认密码不再适用，请使用自定义密码登录。
+      - 只有跟踪脚本与访客视图（/script.js、/vault）对匿名访客开放；登录页与操作台只在懒猫客户端或已登录的微服用户可访问。
+      - 被统计网站的访客不需要懒猫账号。
+      - 数据保存在 /lzcapp/var 下，重启与升级不会丢失。
+      - 界面目前只有英文（上游没有提供中文界面）。
+  en-US:
+    name: Offen
+    description: A fair, open-source and privacy-friendly web analytics tool.
+    usage: |
+      Offen is a privacy-first web analytics tool you host yourself: this app is the
+      collection backend plus the operator dashboard.
+
+      Review account (default; used when no custom admin password was set at install.
+      Opening the app fills the login form and signs you in, so typing is normally not needed):
+      - Email: admin@offen.local
+      - Password: Offen@Lazycat2026
+
+      Getting started:
+      1. Opening the app takes you to the login page, fills it in and signs you in.
+      2. In the dashboard, review page views, referrers and sources.
+      3. Copy the tracking snippet ("Embed code") and add it to your website to start
+         collecting stats.
+
+      Notes:
+      - If a custom admin password was set during installation, the default above does not
+        apply; use the custom password to sign in.
+      - Only the tracking script and the visitor view (/script.js, /vault) are reachable
+        without a LazyCat login; the login page and the dashboard require the LazyCat
+        client or a signed-in microserver user.
+      - Visitors of the tracked website do not need a LazyCat account.
+      - Data is stored under /lzcapp/var and survives restarts and upgrades.
+      - The user interface is English only (upstream ships no other language).
+permissions:
+  required:
+    - net.internet
+  optional: []
